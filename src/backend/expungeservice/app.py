@@ -3,7 +3,7 @@ from flask import Flask
 from .config import app_config
 
 # Add new endpoint imports here:
-from .endpoints import hello, auth, users
+from .endpoints import hello, auth, users, search
 from .request import before, teardown
 import logging
 
@@ -23,6 +23,7 @@ def create_app(env_name):
     # Register endpoint routes here:
     hello.register(app)
     auth.register(app)
+    search.register(app)
     users.register(app)
 
     app.before_request(before)
