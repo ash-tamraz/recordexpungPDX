@@ -6,9 +6,17 @@ Data format TBD.
 
 """
 
+from flask.views import MethodView
+from flask import request, current_app
 
+class SearchQuery(MethodView):
+  def post(self):
+    data = request.get_json()
+    return "data received" 
 
 
 def register(app):
   # app.add_url_rules will go here
-  pass
+  app.add_url_rule('/api/v0.1/search', view_func=SearchQuery.as_view('search'))
+
+
