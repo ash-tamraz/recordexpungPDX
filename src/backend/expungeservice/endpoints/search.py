@@ -11,11 +11,15 @@ Look in slack channel for remote site login
 from flask.views import MethodView
 from flask import request, current_app, jsonify, abort
 
+import expungeservice
+from .auth import auth_required
+
 # idea: create custom class based on MethodView which checks headers, etc.
 
 # post request will need authentication header from auth.py endpoint
 # Arun wrote decorator for authentication
 class SearchQuery(MethodView):
+  @auth_required
   def post(self):
     data = request.get_json()
 
@@ -30,8 +34,7 @@ class SearchQuery(MethodView):
     # Testing receiving basic POST request
     # Expecting incoming POST request to have three fields, First Name,
     # Last Name, and Date of Birth (DoB)
-    if data['first_name'] and data['last_name'] and data['dob']:
-      response_data['data'] = data['first_name'] + data['last_name'] + data['dob']
+    response_data['data'] = data['dob']
 
     return jsonify(response_data), 201
 
