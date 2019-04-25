@@ -21,7 +21,7 @@ from .auth import auth_required
 class SearchQuery(MethodView):
   @auth_required
   def post(self):
-    data = request.get_json()
+    data = request.is_json()
 
     response_data = {
       'data': None
@@ -34,9 +34,8 @@ class SearchQuery(MethodView):
     # Testing receiving basic POST request
     # Expecting incoming POST request to have three fields, First Name,
     # Last Name, and Date of Birth (DoB)
-    response_data['data'] = data['dob']
-
-    return jsonify(response_data), 201
+    print('printing data: '+data)
+    return data, 201
 
 def register(app):
   # app.add_url_rules will go here

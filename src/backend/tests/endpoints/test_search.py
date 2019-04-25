@@ -45,14 +45,14 @@ def create_post_obj(client, username, password):
   POST requests
   """
   token = get_auth_token(client, username, password)
-  query_obj = {('first_name', 'foo'),
+  query_obj = dict({('first_name', 'foo'),
               ('last_name', 'bar'),
-              ('dob', 'baz')}
-  headers_obj = token.get_json()
-  post_obj = {
+              ('dob', 'baz')})
+  headers_obj = dict(token.get_json())
+  post_obj = dict({
           'query' : query_obj,
           'headers' : headers_obj
-          }
+          })
   return post_obj
 
 def test_create_user(client):
@@ -106,8 +106,6 @@ def test_empty_obj_post(client):
   obj = create_post_obj(client, 'test_user', 'test_password')
 #  response = client.post('api/v0.1/search', json={})
 #  response = client.post('/api/v0.1/search', headers={
-  print(obj)
-  assert False
 
 #  assert(response.status_code == 400)
 
@@ -116,17 +114,17 @@ def test_empty_obj_post(client):
    remote site's search fields. Will we send the auth_token to ensure that 
    the sender is permitted to search the database?
 """
-#def test_basic_post(client):
-#  """Testing super basic response to make sure I'm understanding Flask's
-#  POST request functionality correctly.
-#  @param client: app.test_client()
-#  """
-#  post_obj = dict({('first_name', 'foo'), ('last_name', 'bar'), ('dob', 'baz'),
-#      ('auth_token', 'tbd')})
-#  response = client.post('api/v0.1/search', json=post_obj)
-#  endpoint_response = response.get_json()
+def test_basic_post(client):
+  """Testing super basic response to make sure I'm understanding Flask's
+  POST request functionality correctly.
+  @param client: app.test_client()
+  """
+  post_obj = create_post_obj(client, username, password)
+  response = client.post('api/v0.1/search', data=json.dumps(post_obj), headers=json.dumps(post_obj['headers']))
+  endpoint_response = response.data
 #  assert(response.status_code == 201)
-#  assert(endpoint_response['data'] == 'baz')
+  print(endpoint_response)
+  assert False
 
 #def test_basic_post_w_field_contents(client):
 #  """Testing POST request with fields' contents filled out
