@@ -30,9 +30,15 @@ from expungeservice.endpoints import search
 class TestSearch(unittest.TestCase):
 
     def setUp(self):
+
+        # User info for testing
         self.email = 'pytest_user@auth_test.com'
         self.password = 'pytest_password'
         self.hashed_password = generate_password_hash(self.password)
+
+        self.admin_email = 'pytest_admin@auth_test.com'
+        self.admin_password = 'pytest_password_admin'
+        self.hashed_admin_password = generate_password_hash(self.admin_password)
 
         # API endpoint paths
         self.search_path = '/api/v0.1/search'
@@ -42,11 +48,12 @@ class TestSearch(unittest.TestCase):
         # Mocker variables
         self.crawler = Crawler()
         self.mocker_base_url = 'https://publicaccess.courts.oregon.gov/PublicAccessLogin/'
+        self.record = JohnDoe.RECORD_WITH_CLOSED_CASES
+        self.cases = {'X0001': CaseDetails.case_x(),
+                      'X0002': CaseDetails.case_x(),
+                      'X0003': CaseDetails.case_x()}
 
-        self.admin_email = 'pytest_admin@auth_test.com'
-        self.admin_password = 'pytest_password_admin'
-        self.hashed_admin_password = generate_password_hash(self.admin_password)
-
+        # Flask and Werkzeug classes
         self.app = expungeservice.create_app('development')
         self.client = self.app.test_client()
 
@@ -114,32 +121,7 @@ class TestSearch(unittest.TestCase):
                         'password': new_password,
                         'admin': True})
 
-
-
         return response
-
-    def test_create_user_success(self):
-
-        new_email = "pytest_create_user@endpoint_test.com"
-        new_password = "new_password"
-        new_hashed_password = generate_password_hash(new_password)
-
-
-        auth_response = self._get_auth_token(self.admin_email, self.admin_password)
-
-        response = self.client.post(self.users_path, headers={
-            'Authorization': 'Bearer {}'.format(auth_response.get_json()['auth_token'])},
-                json = {'email':new_email,
-                        'password': new_password,
-                        'admin': True})
-
-
-        assert(response.status_code == 201)
-
-        data = response.get_json()
-        assert data['email'] == new_email
-        assert data['admin'] == True
-        assert data['timestamp']
 
     def test_search_empty_request(self):
         new_email = "pytest_create_user@endpoint_test.com"
@@ -154,82 +136,16 @@ class TestSearch(unittest.TestCase):
         }
 
         with requests_mock.Mocker() as m:
-            m.post(self.mocker_base_url + 'Search.aspx?ID=100', [{'text': SearchPageResponse.RESPONSE}, {'text': JohnDoe.BLANK_RECORD}])
+            m.post(URL.login_url(), text=PostLoginPage.POST_LOGIN_PAGE)
+            m.post('https://publicaccess.courts.oregon.gov/PublicAccessLogin/login.aspx',
+                [{'text': SearchPageResponse.RESPONSE}, {'text': JohnDoe.BLANK_RECORD}])
+
+            for key, value in self.cases.items():
+                m.get("{}{}{}".format('https://publicaccess.courts.oregon.gov/PublicAccessLogin/login.aspx', 'CaseDetail.aspx?CaseID=', key), text=value)
+
             response = self.client.post(self.search_path, headers=header_obj, json=post_obj)
-            print("XXXresponse: ",response.get_json())
-#            print(response)
+            print("DEBUGresponse: ", response.data)
+
+        # Ensuring failure in order to get output from print statement above
         assert(False)
-#            for key, value in self.crawler.result.cases.items():
-#                m.get("{}{}{}".format(base_url, 'CaseDetail.aspx?CaseID=', key), text=value)
-#
-#            self.crawler.search('John', 'Doe')
-##    self.crawler.search('John', 'Doe')
 
-#        response = self.client.post('/api/v0.1/search', headers={
-#            'Authorization': 'Bearer {}'.format(auth_response.get_json()['auth_token'])},
-#                json = {'email':new_email,
-#                        'password': new_password,
-#                        'admin': True})
-#
-#        assert(response.status_code == 201)
-
-#@pytest.fixture(scope='module')
-#def app():
-#  return expungeservice.create_app('development')
-#
-#@pytest.fixture(scope='module')
-#def client(app):
-#  return app.test_client()
-#
-#"""Borrowing some testing variables from Arun's `test_auth.py`
-#"""
-#email = 'pytest_create_user@endpoint_test.com'
-#password = 'new_password'
-#hashed_password = generate_password_hash(password)
-#
-#admin_email = 'pytest_admin@auth_test.com'
-#admin_password = 'pytest_password_admin'
-#hashed_admin_password = generate_password_hash(admin_password)
-#
-#search_path = 'api/v0.1/search'
-#
-#def test_create_user_success(client):
-#            expungeservice.request.before()
-#
-#            user.create_user(g.database, email, hashed_password, False)
-#            user.create_user(g.database, admin_email, hashed_admin_password, True)
-#
-#    get_auth_response = self.get_auth_token(self.admin_email, self.admin_password)
-#
-#    response = self.client.post('/api/v0.1/users', headers={
-#        'Authorization': 'Bearer {}'.format(get_auth_response.get_json()['auth_token'])},
-#            json = {'email':new_email,
-#                    'password': new_password,
-#                    'admin': True})
-#
-#
-#    assert(response.status_code == 201)
-#
-#    data = response.get_json()
-#    assert data['email'] == new_email
-#    assert data['admin'] == True
-#    assert data['timestamp']
-#
-#
-#def test_basic_post_w_valid_auth_token(client):
-##  """Testing super basic response to make sure I'm understanding Flask's
-##  POST request functionality correctly.
-##  @param client: app.test_client()
-##  """
-#  base_url = 'https://publicaccess.courts.oregon.gov/PublicAccessLogin/'
-#  with requests_mock.Mocker() as m:
-#    m.post(base_url + 'Search.aspx?ID=100', [{'text': SearchPageResponse.RESPONSE},
-#    {'text': JohnDoe.BLANK_RECORD}])
-#    post_obj = create_post_obj(client, username, password)
-#    header_obj = create_header_obj(client, username, password)
-#    response = client.post(search_path, headers=header_obj, json=post_obj)
-##    self.crawler.search('John', 'Doe')
-##
-##  assert len(self.crawler.result.cases) == 0
-#
-#
