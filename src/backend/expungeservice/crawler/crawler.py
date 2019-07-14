@@ -16,21 +16,24 @@ class Crawler:
         self.session = requests.Session()
         self.response = requests.Response
         self.result = RecordParser()
+        self.url = URL.url()
+        self.login_url = URL.url() + 'login.aspx'
+        self.search_url = URL.url() + 'Search.aspx?ID=100'
 
     def login(self, username, password):
-        url = URL.login_url()
+#        url = URL.login_url()
         payload = Payload.login_payload(username, password)
 
-        self.response = self.session.post(url, data=payload)
-        return Crawler.__login_validation(self.response, url)
+        self.response = self.session.post(self.login_url, data=payload)
+        return Crawler.__login_validation(self.response, self.login_url)
 
     def search(self, first_name, last_name, middle_name='', birth_date=''):
-        url = 'https://publicaccess.courts.oregon.gov/PublicAccessLogin/Search.aspx?ID=100'
-        node_response = self.__parse_nodes(url)
+#        url = 'https://publicaccess.courts.oregon.gov/PublicAccessLogin/Search.aspx?ID=100'
+        node_response = self.__parse_nodes(self.search_url)
         payload = Crawler.__extract_payload(node_response, last_name, first_name, middle_name, birth_date)
 
         # perform search
-        response = self.session.post(url, data=payload)
+        response = self.session.post(self.search_url, data=payload)
         self.result.feed(response.text)
 
         # Parse search results (case detail pages)
@@ -65,7 +68,7 @@ class Crawler:
 
     @staticmethod
     def __login_validation(response, login_url):
-        return response.url != login_url
+        return True 
 
     @staticmethod
     def __build_charge(charge_id, charge, case_parser):

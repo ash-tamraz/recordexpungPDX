@@ -9,6 +9,7 @@ import requests_mock
 import jwt
 import pytest
 import json
+from unittest import mock
 
 """Modules borrowed from Nick's test file `test_crawler.py` for testing
 response from Crawler's search method
@@ -25,9 +26,46 @@ from expungeservice.database import user
 from werkzeug.security import generate_password_hash
 
 import expungeservice
-from expungeservice.endpoints import search
+from expungeservice.endpoints.search import SearchQuery
+
+
+## This method will be used by the mock to replace requests.get
+#def mocked_requests_get(*args, **kwargs):
+#    class MockResponse:
+#        def __init__(self, json_data, status_code):
+#            self.json_data = json_data
+#            self.status_code = status_code
+#
+#        def json(self):
+#            return self.json_data
+#
+#    if args[0] == 'http://someurl.com/test.json':
+#        return MockResponse({"key1": "value1"}, 200)
+#    elif args[0] == 'http://someotherurl.com/anothertest.json':
+#        return MockResponse({"key2": "value2"}, 200)
+#
+#    return MockResponse(None, 404)
+
 
 class TestSearch(unittest.TestCase):
+
+#    # We patch 'requests.get' with our own method. The mock object is passed in to our test case method.
+#    @mock.patch('requests.post', side_effect=mocked_requests_get)
+#    def test_fetch(self, mock_get):
+#        # Assert requests.get calls
+#        search = SearchQuery()
+#        json_data = search.post()
+#        self.assertEqual(json_data, {"key1": "value1"})
+#        json_data = mgc.fetch_json('http://someotherurl.com/anothertest.json')
+#        self.assertEqual(json_data, {"key2": "value2"})
+#        json_data = mgc.fetch_json('http://nonexistenturl.com/cantfindme.json')
+#        self.assertIsNone(json_data)
+#
+#        # We can even assert that our mocked method was called with the right parameters
+#        self.assertIn(mock.call('http://someurl.com/test.json'), mock_get.call_args_list)
+#        self.assertIn(mock.call('http://someotherurl.com/anothertest.json'), mock_get.call_args_list)
+#
+#        self.assertEqual(len(mock_get.call_args_list), 3)
 
     def setUp(self):
 
@@ -105,7 +143,15 @@ class TestSearch(unittest.TestCase):
         })
 
         return post_obj
-
+#
+#    def _crawler_log_in(self):
+#        crawler = Crawler()
+#        with requests_mock.Mocker() as m:
+#            m.post(URL.login_url(), text=PostLoginPage.POST_LOGIN_PAGE)
+#            crawler.login('username', 'password')
+#
+#        return crawler
+#
     def _create_user(self):
 
         new_email = "pytest_create_user@endpoint_test.com"
@@ -123,12 +169,14 @@ class TestSearch(unittest.TestCase):
 
         return response
 
-    def test_search_empty_request(self):
+    def test_search_crawler_init(self):
         new_email = "pytest_create_user@endpoint_test.com"
         new_password = "new_password"
         new_hashed_password = generate_password_hash(new_password)
 
 
+        cases = {}
+        record = JohnDoe.BLANK_RECORD
         auth_response = self._get_auth_token(self.admin_email, self.admin_password)
         post_obj = self._create_post_obj()
         header_obj = {
@@ -137,14 +185,40 @@ class TestSearch(unittest.TestCase):
 
         with requests_mock.Mocker() as m:
             m.post(URL.login_url(), text=PostLoginPage.POST_LOGIN_PAGE)
-            m.post('https://publicaccess.courts.oregon.gov/PublicAccessLogin/login.aspx',
-                [{'text': SearchPageResponse.RESPONSE}, {'text': JohnDoe.BLANK_RECORD}])
+            response = self.client.get(self.search_path, headers=header_obj)
+        print(response.data)  
+        assert(False)
 
-            for key, value in self.cases.items():
-                m.get("{}{}{}".format('https://publicaccess.courts.oregon.gov/PublicAccessLogin/login.aspx', 'CaseDetail.aspx?CaseID=', key), text=value)
+    def test_search_empty_request(self):
+        new_email = "pytest_create_user@endpoint_test.com"
+        new_password = "new_password"
+        new_hashed_password = generate_password_hash(new_password)
+
+
+        cases = {}
+        record = JohnDoe.BLANK_RECORD
+        auth_response = self._get_auth_token(self.admin_email, self.admin_password)
+        post_obj = self._create_post_obj()
+        header_obj = {
+            'Authorization': 'Bearer {}'.format(auth_response.get_json()['auth_token'])
+        }
+
+        base_url = 'https://publicaccess.courts.oregon.gov/PublicAccessLogin/'
+        with requests_mock.Mocker() as m:
+            m.post(URL.login_url(), text=PostLoginPage.POST_LOGIN_PAGE)
+            response = self.client.get(self.search_path, headers=header_obj)
+
+            m.post("{}{}".format(base_url, 'Search.aspx?ID=100'), [{'text': SearchPageResponse.RESPONSE},
+                                                                   {'text': record}])
+
+            for key, value in cases.items():
+                m.get("{}{}{}".format(base_url, 'CaseDetail.aspx?CaseID=', key), text=value)
+
+#            for key, value in cases.items():
+#                m.get("{}{}{}".format('https://publicaccess.courts.oregon.gov/PublicAccessLogin/', 'CaseDetail.aspx?CaseID=', key), text=value)
 
             response = self.client.post(self.search_path, headers=header_obj, json=post_obj)
-            print("DEBUGresponse: ", response.data)
+            print("DEBUGresponse: ", str(response.data))
 
         # Ensuring failure in order to get output from print statement above
         assert(False)
